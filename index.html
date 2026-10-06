@@ -98,7 +98,7 @@ table{border-collapse:collapse;width:100%;font-size:15px;line-height:24px}td,th{
   const body=document.body, btn=document.querySelector(".pbtn"), tool=document.querySelector(".ptool"), cnt=document.querySelector(".pcount");
   const pages=()=>[...document.querySelectorAll(".page")];
   const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let i=0, idle, busy=false;
+  let i=0, idle, busy=false, pending=false;
 
   /* ---- rings: emitted from the portal, drawn on canvas (cheap, smooth) ---- */
   const N=11, T=24000, CX=788, CY=351.2, R0=150, K=.578;
@@ -121,6 +121,7 @@ table{border-collapse:collapse;width:100%;font-size:15px;line-height:24px}td,th{
   function wake(ms){ tool.classList.remove("idle"); clearTimeout(idle); idle=setTimeout(()=>tool.classList.add("idle"),ms||2600); }
   function go(k){
     const ps=pages(); k=Math.max(0,Math.min(ps.length-1,k)); if(k===i||busy) return;
+    pending=false;
     const dir=k>i?1:-1, from=ps[i]; let to=ps[k]; i=k; count();
     const isCover=to.classList.contains("cover"); if(isCover){ to=replayCover(to); if(!reduce) to.classList.add("hold"); }  // hold the entrance until the slide has landed
     if(reduce){ from.classList.remove("on"); to.classList.add("on"); return; }
@@ -132,12 +133,14 @@ table{border-collapse:collapse;width:100%;font-size:15px;line-height:24px}td,th{
   }
   function enter(){
     body.classList.add("present"); fit(); i=0; count();
-    pages().forEach((p,j)=>{ p.classList.remove("in","out"); p.classList.toggle("on",j===0); });
+    pages().forEach((p,j)=>{ p.classList.remove("in","out","hold"); p.classList.toggle("on",j===0); });
+    pages()[0].classList.add("hold"); pending=true;  // freeze the cover at its first frame while the window goes full screen
     wake(4000);
-    const start=()=>{ fit(); setTimeout(()=>{ fit(); replayCover(pages()[0]).classList.add("on"); },150); };
+    // wait for the fullscreen resize to settle (no resize for 350ms) before playing the entrance
+    const start=()=>{ fit(); let t; const kick=()=>{ clearTimeout(t); t=setTimeout(done,350); }, done=()=>{ removeEventListener("resize",kick); if(!pending||!body.classList.contains("present")) return; pending=false; fit(); const c=replayCover(pages()[0]); c.classList.remove("hold"); c.classList.add("on"); }; addEventListener("resize",kick); kick(); };
     const el=document.documentElement; if(el.requestFullscreen) el.requestFullscreen().then(start).catch(start); else start();
   }
-  function exit(){ body.classList.remove("present"); pages().forEach(p=>p.classList.remove("on","in","out")); if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }
+  function exit(){ pending=false; body.classList.remove("present"); pages().forEach(p=>p.classList.remove("on","in","out","hold")); if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }
 
   btn.addEventListener("click",e=>{ e.stopPropagation(); enter(); });
   tool.addEventListener("click",e=>{ e.stopPropagation(); const b=e.target.closest(".pk"); if(!b) return; const a=b.dataset.a; if(a==="prev") go(i-1); else if(a==="next") go(i+1); else exit(); wake(); });
