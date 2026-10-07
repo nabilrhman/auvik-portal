@@ -120,16 +120,17 @@ table{border-collapse:collapse;width:100%;font-size:15px;line-height:24px}td,th{
   function count(){ const n=pages().length; cnt.textContent=String(i+1).padStart(2,"0")+" / "+String(n).padStart(2,"0"); }
   function wake(ms){ tool.classList.remove("idle"); clearTimeout(idle); idle=setTimeout(()=>tool.classList.add("idle"),ms||2600); }
   function go(k){
-    const ps=pages(); k=Math.max(0,Math.min(ps.length-1,k)); if(k===i||busy) return;
+    const ps=pages(); k=Math.max(0,Math.min(ps.length-1,k)); if(k===i||busy) return false;
     pending=false;
     const dir=k>i?1:-1, from=ps[i]; let to=ps[k]; i=k; count();
     const isCover=to.classList.contains("cover"); if(isCover){ to=replayCover(to); if(!reduce) to.classList.add("hold"); }  // hold the entrance until the slide has landed
-    if(reduce){ from.classList.remove("on"); to.classList.add("on"); return; }
+    if(reduce){ from.classList.remove("on"); to.classList.add("on"); return true; }
     busy=true;
     [from,to].forEach(p=>p.style.setProperty("--d",dir));
     from.classList.remove("on"); from.classList.add("out");
     to.classList.add("on","in");
     setTimeout(()=>{ from.classList.remove("out"); to.classList.remove("in","hold"); busy=false; },720);
+    return true;
   }
   function enter(){
     body.classList.add("present"); fit(); i=0; count();
@@ -152,8 +153,8 @@ table{border-collapse:collapse;width:100%;font-size:15px;line-height:24px}td,th{
   addEventListener("wheel",e=>{
     if(!body.classList.contains("present")) return; e.preventDefault();
     clearTimeout(quiet); quiet=setTimeout(()=>{ lock=false; acc=0; },200);
-    if(lock) return; acc+=e.deltaY;
-    if(Math.abs(acc)>40){ go(acc>0?i+1:i-1); lock=true; acc=0; }
+    if(lock) return; acc+=e.deltaMode? e.deltaY*40 : e.deltaY;  // line-based wheels report tiny deltas
+    if(Math.abs(acc)>12){ if(go(acc>0?i+1:i-1)) lock=true; acc=0; }  // only lock once a slide actually moved
   },{passive:false});
   let tx=null;  // swipe left/right on touch screens
   addEventListener("touchstart",e=>{ if(!body.classList.contains("present")) return; tx=e.touches[0].clientX; wake(); },{passive:true});
