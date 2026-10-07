@@ -153,7 +153,7 @@ table{border-collapse:collapse;width:100%;font-size:15px;line-height:24px}td,th{
     if(!body.classList.contains("present")) return; e.preventDefault();
     clearTimeout(quiet); quiet=setTimeout(()=>{ lock=false; acc=0; },200);
     if(lock) return; acc+=e.deltaY;
-    if(Math.abs(acc)>40){ go(acc>0?i+1:i-1); lock=true; acc=0; wake(); }
+    if(Math.abs(acc)>40){ go(acc>0?i+1:i-1); lock=true; acc=0; }
   },{passive:false});
   let tx=null;  // swipe left/right on touch screens
   addEventListener("touchstart",e=>{ if(!body.classList.contains("present")) return; tx=e.touches[0].clientX; wake(); },{passive:true});
